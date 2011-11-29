@@ -2,6 +2,7 @@
 # coding: utf-8
 
 from html.parser import HTMLParser
+import json 
 
 class MegasenaParser(HTMLParser):
     title = "Resultado"
@@ -38,6 +39,9 @@ class MegasenaParser(HTMLParser):
         else:
             pass
 
+    def to_json(self):
+        return json.dumps(self.concursos)
+
 if __name__ == '__main__':
     mp = MegasenaParser() 
-    print(mp.concursos)
+    print(mp.to_json())
