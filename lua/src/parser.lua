@@ -1,4 +1,11 @@
+local html = require 'lib.html'
+
 function megasena(args)
+
+    io.input('../resultados/D_MEGA.HTM')
+    local h = io.read("*all")
+    local parsed = html.collect(h)
+
     local title = 'Resultados da Mega-sena'
     if args.title then
         return title 
