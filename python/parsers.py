@@ -1,16 +1,15 @@
-#!/usr/bin/env python3
 # coding: utf-8
 
-from html.parser import HTMLParser
-import json 
+from HTMLParser import HTMLParser
+from datetime import datetime
 
 class LoteriasParser(HTMLParser):
-    title = "Resultado"
-    concursos = []
-    headers = []
-    in_headers = False 
     def __init__(self,page):
-        page = open(page, encoding = 'iso-8859-1').read()
+        self.title = "Resultado"
+        self.concursos = []
+        self.headers = []
+        self.in_headers = False #flag de estado
+        page = open(page).read()
         HTMLParser.__init__(self)
         self.feed(page)
 
@@ -27,7 +26,7 @@ class LoteriasParser(HTMLParser):
             self.concursos.append(conc)
         elif tag == 'th':
             self.in_headers = False
-        self.current_tag = None 
+        self.current_tag = None
 
     def handle_data(self, data):
         if self.current_tag == 'title':
@@ -35,45 +34,35 @@ class LoteriasParser(HTMLParser):
         elif self.current_tag == 'font' and self.in_headers:
             self.headers.append(data)
         elif self.current_tag == 'td':
-            self.line.append(data)
+            v = data
+            if v.find(",") > -1:
+                v = float(v.replace(".","").replace(",","."))
+            elif v.find("/") > -1:
+                v = datetime.strptime(v,"%d/%m/%Y")
+            else:
+                try:
+                    v = int(v)
+                except ValueError, e:
+                    pass
+            self.line.append(v)
         else:
             pass
 
-    def to_json(self):
-        return json.dumps(self.concursos)
-
-    def sorteados(self, num):
-        """Apostas sorteadas para o concurso num"""
-        apostas = self.apostas or []
-        concurso = {} if num>=len(self.concursos) else self.concursos[num]
-        return set([concurso.get(x,0) for x in apostas])
-
-    def confere(self, num, apostas):
-        res = []
-        if num >= len(self.concursos):
-            res.append("Concurso %d - não aconteceu" % num )
-        else:
-            res.append("Concurso: %d - %s" % (num, self.concursos[num]['Data Sorteio']))
-            res.append("\tJogos sorteados: %s" % (" ".join(sorted(self.sorteados(num)))))
-            res.append("\tJogos    feitos: %s" % (" ".join(apostas)))
-            acertos = self.sorteados(num).intersection(apostas)
-            res.append("\t%d acertos - %s" % (len(acertos), " ".join(sorted(acertos))))
-        return "\n".join(res)
 
 class MegasenaParser(LoteriasParser):
-    apostas = [ x for x in map(lambda s: "%dª Dezena" %s, range(1,7)) ]
     def __init__(self,page="../resultados/D_MEGA.HTM"):
+        self.apostas = [ x for x in map(lambda s: "%dª Dezena" %s, range(1,7)) ]
+        self.floats = ['Rateio_Sena']
         LoteriasParser.__init__(self,page)
 
 class LotofacilParser(LoteriasParser):
-    apostas = [ x for x in map(lambda s: "Bola%d" % s, range(1,16)) ]
+    
     def __init__(self,page="../resultados/D_LOTFAC.HTM"):
+        self.apostas = [ x for x in map(lambda s: "Bola%d" % s, range(1,16)) ]
         LoteriasParser.__init__(self,page)
 
 if __name__ == '__main__':
-    mp = MegasenaParser() 
-    from pprint import pprint 
-    pprint(mp.concursos)
+    mp = MegasenaParser()
     lp = LotofacilParser()
-    pprint(lp.concursos)
-
+    from pprint import pprint
+    pprint(mp.concursos)
